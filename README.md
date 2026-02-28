@@ -82,6 +82,7 @@ sudo mkdir -p /mnt/data
 sudo chown -R $USER:$USER /mnt/data
 
 # Option B — use sudo for the setup script and then fix ownership
+chmod +x scripts/setup_folders.sh
 sudo ./scripts/setup_folders.sh <your_case_name>
 sudo chown -R $USER:$USER /mnt/data
 ```
