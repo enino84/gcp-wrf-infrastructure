@@ -82,7 +82,6 @@ sudo mkdir -p /mnt/data
 sudo chown -R $USER:$USER /mnt/data
 
 # Option B — use sudo for the setup script and then fix ownership
-chmod +x scripts/setup_folders.sh
 sudo ./scripts/setup_folders.sh <your_case_name>
 sudo chown -R $USER:$USER /mnt/data
 ```
@@ -97,17 +96,17 @@ The output should show your username as owner. Without this step, the setup and 
 
 ---
 
-
----
-
 ## Step 0 — Set Up Host Directory Structure
 
-Run once to create the required folder skeleton on the host:
+Run once to create the required folder skeleton on the host. **All scripts must be run from the repository root** (the folder that contains `Dockerfile.libs`, `Dockerfile.wrf`, etc.), not from inside the `scripts/` directory.
 
 ```bash
+# Make sure you are at the repo root first
+cd /path/to/wrf-docker-pipeline
+
 chmod +x scripts/setup_folders.sh
-./scripts/setup_folders.sh <your_case_name>
-# Example: ./scripts/setup_folders.sh my_experiment
+sudo ./scripts/setup_folders.sh <your_case_name>
+# Example: sudo ./scripts/setup_folders.sh my_experiment
 ```
 
 **What it creates:**
@@ -209,7 +208,9 @@ chmod +x scripts/run_wps.sh
 
 ## Step 4 — Run WRF Simulation
 
-Runs `real.exe` (initial/boundary condition preparation) followed by `wrf.exe` (the model itself). Launched in the background with `nohup` so it survives terminal disconnects.
+Runs `real.exe` (initial/boundary condition preparation) followed by `wrf.exe` (the model itself). Launched with `nohup` in the background so the simulation survives terminal disconnects and SSH session drops.
+
+> 💡 **Why `nohup`?** WRF simulations can take hours. Without `nohup`, closing your terminal or losing your SSH connection would kill the process. With `nohup`, the simulation keeps running and all output is captured in `simulation.log`.
 
 ```bash
 chmod +x scripts/run_wrf.sh
