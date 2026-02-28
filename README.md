@@ -70,6 +70,8 @@ Download WPS_GEOG from [UCAR's WRF Users Page](https://www2.mmm.ucar.edu/wrf/use
 
 GFS data can be downloaded automatically with the provided script (see Step 2).
 
+---
+
 ## Host Filesystem Permissions
 
 On most Linux servers `/mnt` is owned by `root`. Before running any script, ensure your user has write access:
@@ -91,6 +93,9 @@ ls -ld /mnt/data
 ```
 
 The output should show your username as owner. Without this step, the setup and download scripts will fail with `Permission denied`.
+
+---
+
 
 ---
 

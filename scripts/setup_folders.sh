@@ -22,7 +22,13 @@ mkdir -p "$CASE_DIR/gfs_data"
 mkdir -p "$CASE_DIR/output"
 mkdir -p "$PROJECT_ROOT/WPS_GEOG"
 
-chmod -R 755 "$PROJECT_ROOT"
+# Only chmod the newly created directories, not the entire /mnt/data tree
+# chmod -R on a large directory (GFS data, WPS_GEOG, etc.) can take minutes
+chmod 755 "$PROJECT_ROOT/WPS_GEOG"
+chmod 755 "$PROJECT_ROOT/cases"
+chmod 755 "$CASE_DIR"
+chmod 755 "$CASE_DIR/gfs_data"
+chmod 755 "$CASE_DIR/output"
 
 echo ""
 echo "Structure created:"
