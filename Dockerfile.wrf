@@ -1,0 +1,32 @@
+FROM wrf-libs-base:latest
+
+WORKDIR /wrf
+RUN git clone --depth 1 --branch v4.5.2 --recursive https://github.com/wrf-model/WRF.git WRF
+
+WORKDIR /wrf/WRF
+
+# Configure WRF: option 34 = gfortran/gcc, option 1 = serial (no MPI).
+# After configuration, patch configure.wrf to disable Link-Time Optimization (LTO).
+# LTO is enabled by default in Ubuntu 22.04's gcc/gfortran and causes linker errors
+# (ld: error: ...) during WRF compilation. Disabling it resolves this.
+RUN printf "34\n1\n" | ./configure && \
+    sed -i 's/^FCOPTIM[ \t]*=.*/& -fno-lto/g' configure.wrf && \
+    sed -i 's/^CFLAGS_LOCAL[ \t]*=.*/& -fno-lto/g' configure.wrf && \
+    sed -i 's/^LDFLAGS_LOCAL[ \t]*=.*/& -fno-lto/g' configure.wrf
+
+# Use 2 parallel jobs for compilation
+ENV J="-j 2"
+
+# Compile WRF and validate that all required executables were produced
+RUN echo "Starting WRF em_real compilation..." && \
+    ./compile em_real && \
+    echo "--- Validating WRF executables ---" && \
+    ls -l main/wrf.exe && \
+    ls -l main/real.exe && \
+    ls -l main/ndown.exe && \
+    ls -l main/tc.exe || \
+    (echo "=== FATAL ERROR: WRF compilation failed ===" && \
+     echo "Check build output above for 'ld:' linker errors." && \
+     exit 1)
+
+CMD ["/bin/bash"]

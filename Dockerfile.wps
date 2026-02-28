@@ -1,0 +1,50 @@
+# Use the compiled WRF image as the base
+FROM wrf-compiled:latest
+
+WORKDIR /wrf
+
+# 1. Install compression libraries and compile a fresh Jasper for WPS.
+#    A separate Jasper build is used here to keep the WPS Jasper paths independent
+#    and avoid any interference with the WRF build environment.
+RUN apt-get update && apt-get install -y wget build-essential libpng-dev zlib1g-dev && \
+    mkdir -p /wrf/grib2 && \
+    wget -q https://www2.mmm.ucar.edu/wrf/OnLineTutorial/compile_tutorial/tar_files/jasper-1.900.1.tar.gz && \
+    tar -xf jasper-1.900.1.tar.gz && \
+    cd jasper-1.900.1 && \
+    ./configure --prefix=/wrf/grib2 && \
+    make -j 2 && make install && \
+    cd .. && rm -rf jasper-1.900.1*
+
+# 2. Clone WPS source
+RUN git clone --depth 1 --branch v4.5 --recursive https://github.com/wrf-model/WPS.git WPS
+
+WORKDIR /wrf/WPS
+
+# 3. Environment variables for WPS compilation
+ENV WRF_DIR=/wrf/WRF
+ENV JASPERLIB=/wrf/grib2/lib
+ENV JASPERINC=/wrf/grib2/include
+ENV NETCDF=/usr
+
+# 4. Configure WPS (option 3 = Linux gfortran serial) and apply two patches:
+#    - Disable LTO (-fno-lto): same linker fix as in Dockerfile.wrf
+#    - Fix NetCDF Fortran linking: Ubuntu's configure.wps omits -lnetcdff.
+#      Replacing -lnetcdf with -lnetcdff -lnetcdf ensures the Fortran interface
+#      is linked before the C library (order matters for the linker).
+RUN printf "3\n" | ./configure && \
+    sed -i 's/^FCOPTIM[ \t]*=.*/& -fno-lto/g' configure.wps && \
+    sed -i 's/^CFLAGS_LOCAL[ \t]*=.*/& -fno-lto/g' configure.wps && \
+    sed -i 's/^LDFLAGS_LOCAL[ \t]*=.*/& -fno-lto/g' configure.wps && \
+    sed -i 's/-lnetcdf/-lnetcdff -lnetcdf/g' configure.wps
+
+# 5. Compile WPS and validate executables
+RUN echo "Starting WPS compilation..." && \
+    ./compile && \
+    echo "--- Validating WPS executables ---" && \
+    ls -l geogrid.exe && \
+    ls -l ungrib.exe && \
+    ls -l metgrid.exe || \
+    (echo "=== FATAL ERROR: WPS compilation failed ===" && \
+     exit 1)
+
+CMD ["/bin/bash"]

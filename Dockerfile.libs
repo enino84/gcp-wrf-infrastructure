@@ -1,0 +1,30 @@
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 1. System libraries: NetCDF, MPICH, compilers
+RUN apt-get update && apt-get install -y \
+    build-essential gfortran gcc g++ m4 make perl tar wget csh bash git \
+    zlib1g-dev libpng-dev libnetcdf-dev libnetcdff-dev libmpich-dev \
+    && apt-get clean
+
+# 2. Compile Jasper 1.900.1 from source
+#    Required because Ubuntu's packaged Jasper is incompatible with ungrib.exe.
+#    The sed patch fixes a 'const char*' type mismatch that causes compilation failure.
+RUN mkdir -p /wrf/downloads /wrf/libs/jasper
+WORKDIR /wrf/downloads
+RUN wget https://www2.mmm.ucar.edu/wrf/OnLineTutorial/compile_tutorial/tar_files/jasper-1.900.1.tar.gz && \
+    tar -xf jasper-1.900.1.tar.gz && \
+    cd jasper-1.900.1 && \
+    sed -i 's/char \*optstr/const char \*optstr/g' src/libjasper/jpg/jpg_dummy.c && \
+    ./configure --prefix=/wrf/libs/jasper && \
+    make && \
+    make install
+
+# 3. Environment variables pointing to the compiled libraries
+ENV NETCDF=/usr
+ENV JASPERLIB=/wrf/libs/jasper/lib
+ENV JASPERINC=/wrf/libs/jasper/include
+ENV LD_LIBRARY_PATH="/wrf/libs/jasper/lib:$LD_LIBRARY_PATH"
+
+WORKDIR /wrf
