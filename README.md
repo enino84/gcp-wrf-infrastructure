@@ -129,16 +129,23 @@ sudo ./scripts/setup_folders.sh <your_case_name>
 
 Build the three images in order. Each stage depends on the previous one.
 
+> 💡 **Why `nohup`?** Stage 2 (WRF) can take 60–120 minutes. Without `nohup`, losing your SSH connection would kill the build and you would have to start over. Use `nohup` for any stage that may outlast your session, and monitor progress with `tail -f`.
+
 ```bash
 # Stage 1: Base libraries (~10–15 min)
-docker build -f Dockerfile.libs -t wrf-libs-base:latest .
+nohup docker build -f Dockerfile.libs -t wrf-libs-base:latest . > build_libs.log 2>&1 &
+tail -f build_libs.log
 
-# Stage 2: WRF compilation (~60–120 min depending on CPU)
-docker build -f Dockerfile.wrf -t wrf-compiled:latest .
+# Stage 2: WRF compilation (~60–120 min) — nohup strongly recommended
+nohup docker build -f Dockerfile.wrf -t wrf-compiled:latest . > build_wrf.log 2>&1 &
+tail -f build_wrf.log
 
 # Stage 3: WPS compilation (~10–20 min)
-docker build -f Dockerfile.wps -t wps-compiled:latest .
+nohup docker build -f Dockerfile.wps -t wps-compiled:latest . > build_wps.log 2>&1 &
+tail -f build_wps.log
 ```
+
+Each `nohup` command returns immediately and runs the build in the background. The `tail -f` lets you watch progress live — you can safely close it with `Ctrl+C` and reconnect later with `tail -f build_wrf.log`.
 
 **Validation:** After each stage, the Dockerfile validates that required executables exist. If any binary is missing, the build will fail with a clear error message.
 
