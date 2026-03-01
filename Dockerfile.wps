@@ -42,7 +42,7 @@ RUN FC=gfortran CC=gcc printf "1\n" | ./configure && \
     sed -i 's/^FCOPTIM[ \t]*=.*/& -fno-lto/g' configure.wps && \
     sed -i 's/^CFLAGS_LOCAL[ \t]*=.*/& -fno-lto/g' configure.wps && \
     sed -i 's/^LDFLAGS_LOCAL[ \t]*=.*/& -fno-lto/g' configure.wps && \
-    sed -i 's/-lnetcdf/-lnetcdff -lnetcdf/g' configure.wps
+    sed -i 's/-lnetcdf/-lnetcdff -lnetcdf -lgomp/g' configure.wps
 
 # 5. Compile WPS each target explicitly so failures are visible,
 #    then show /wrf/WPS/ contents and validate the three main executables.
