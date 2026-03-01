@@ -6,7 +6,7 @@
 # Arguments:
 #   case_name    : name of the simulation case (e.g. test001)
 #   namelist_wps : path to namelist.wps  (default: namelist_examples/colombia/namelist.wps)
-#   vtable       : path to Vtable        (default: namelist_examples/colombia/Vtable)
+#   vtable       : path to Vtable        (default: extract from container)
 #   data_root    : base data path        (default: /mnt/data)
 #
 # Examples:
@@ -39,6 +39,9 @@ echo "Case directory : $CASE_DIR"
 echo "GEOG directory : $GEOG_DIR"
 echo "namelist.wps   : $NAMELIST_WPS"
 echo ""
+
+# --- Ensure output directory exists on host ---
+mkdir -p "$CASE_DIR/output"
 
 # --- Validate and copy namelist.wps ---
 if [ ! -f "$NAMELIST_WPS" ]; then
@@ -81,7 +84,9 @@ docker run --rm \
     -v "$CASE_DIR":/experimento \
     wps-compiled:latest \
     bash -c "
+        set -e
         cd /wrf/WPS && \
+        mkdir -p /experimento/output && \
         cp /experimento/namelist.wps . && \
         cp /experimento/Vtable . && \
         echo '--- Step 1: geogrid.exe ---' && \
@@ -92,6 +97,7 @@ docker run --rm \
         ./ungrib.exe && \
         echo '--- Step 4: metgrid.exe ---' && \
         ./metgrid.exe && \
+        echo '--- Copying outputs ---' && \
         cp geo_em.d01.nc /experimento/output/ && \
         cp met_em.d01.* /experimento/output/ && \
         echo '--- WPS PIPELINE COMPLETE ---'
