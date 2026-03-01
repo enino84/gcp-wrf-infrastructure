@@ -5,7 +5,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 # 1. System libraries: NetCDF, MPICH, compilers
 RUN apt-get update && apt-get install -y \
     build-essential gfortran gcc g++ m4 make perl tar wget csh bash git \
-    zlib1g-dev libpng-dev libnetcdf-dev libnetcdff-dev libmpich-dev \
+    zlib1g-dev libpng-dev libnetcdf-dev libnetcdff-dev \
+    mpich libmpich-dev \
     && apt-get clean
 
 # 2. Compile Jasper 1.900.1 from source
