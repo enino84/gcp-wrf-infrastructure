@@ -36,7 +36,7 @@ ENV NETCDF=/usr
 #    - Fix NetCDF Fortran linking: Ubuntu's configure.wps omits -lnetcdff.
 #      Replacing -lnetcdf with -lnetcdff -lnetcdf ensures the Fortran interface
 #      is linked before the C library (order matters for the linker).
-RUN FC=gfortran CC=gcc printf "3\n" | ./configure && \
+RUN FC=gfortran CC=gcc printf "1\n" | ./configure && \
     sed -i 's/^FC\s*=.*/FC = gfortran/' configure.wps && \
     sed -i 's/^CC\s*=.*/CC = gcc/' configure.wps && \
     sed -i 's/^FCOPTIM[ \t]*=.*/& -fno-lto/g' configure.wps && \
