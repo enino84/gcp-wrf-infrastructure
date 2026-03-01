@@ -1,24 +1,41 @@
 FROM wrf-libs-base:latest
 
+# Build argument to select compilation mode.
+# Use --build-arg WRF_MODE=dmpar for MPI parallel, or leave default for serial.
+#   serial : configure option 34 — single core, no MPI required
+#   dmpar  : configure option 33 — MPI parallel, use mpirun -np N ./wrf.exe
+ARG WRF_MODE=serial
+
 WORKDIR /wrf
 RUN git clone --depth 1 --branch v4.5.2 --recursive https://github.com/wrf-model/WRF.git WRF
 
 WORKDIR /wrf/WRF
 
-# Configure WRF: option 34 = gfortran/gcc, option 1 = serial (no MPI).
+# Select configure option based on WRF_MODE build argument.
+# Configure option 34 = gfortran/gcc serial
+# Configure option 33 = gfortran/gcc dmpar (MPI)
 # After configuration, patch configure.wrf to disable Link-Time Optimization (LTO).
 # LTO is enabled by default in Ubuntu 22.04's gcc/gfortran and causes linker errors
 # (ld: error: ...) during WRF compilation. Disabling it resolves this.
-RUN printf "34\n1\n" | ./configure && \
+RUN if [ "$WRF_MODE" = "dmpar" ]; then \
+        echo "Configuring WRF in DMPAR (MPI parallel) mode..." && \
+        printf "33\n1\n" | ./configure; \
+    else \
+        echo "Configuring WRF in SERIAL mode..." && \
+        printf "34\n1\n" | ./configure; \
+    fi && \
     sed -i 's/^FCOPTIM[ \t]*=.*/& -fno-lto/g' configure.wrf && \
     sed -i 's/^CFLAGS_LOCAL[ \t]*=.*/& -fno-lto/g' configure.wrf && \
     sed -i 's/^LDFLAGS_LOCAL[ \t]*=.*/& -fno-lto/g' configure.wrf
+
+# Store the build mode so run scripts can detect it
+RUN echo "$WRF_MODE" > /wrf/WRF/.wrf_mode
 
 # Use 2 parallel jobs for compilation
 ENV J="-j 2"
 
 # Compile WRF and validate that all required executables were produced
-RUN echo "Starting WRF em_real compilation..." && \
+RUN echo "Starting WRF em_real compilation (mode: $WRF_MODE)..." && \
     ./compile em_real && \
     echo "--- Validating WRF executables ---" && \
     ls -l main/wrf.exe && \

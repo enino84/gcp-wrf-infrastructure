@@ -95,8 +95,8 @@ sudo chown "$USER:$USER" /mnt/data
 git clone https://github.com/enino84/gcp-wrf-infrastructure.git
 cd gcp-wrf-infrastructure
 
-# One-time only: make all scripts executable, it will chmod the rest
-chmod +x scripts/*.sh
+# One-time only: make setup script executable, it will chmod the rest
+chmod +x scripts/setup_folders.sh
 ```
 
 ---
@@ -152,10 +152,19 @@ docker image ls | grep wrf-libs-base
 
 ### Step 2 — WRF compilation (~60–120 min)
 
+Choose between **serial** (default, 1 core) or **dmpar** (MPI parallel, multiple cores):
+
 ```bash
+# Serial — default, no MPI required
 nohup docker build -f Dockerfile.wrf -t wrf-compiled:latest . > build_wrf.log 2>&1 &
+
+# DMPAR — MPI parallel (recommended for 3 km domains)
+nohup docker build --build-arg WRF_MODE=dmpar -f Dockerfile.wrf -t wrf-compiled:latest . > build_wrf.log 2>&1 &
+
 tail -f build_wrf.log
 ```
+
+> **Which mode to use?** Serial is fine for 27 km and 9 km domains. For 3 km domains (Barranquilla, Montería), dmpar is strongly recommended — a 24h run at 3 km can take 6–12 hours in serial vs 1–2 hours with 8 cores.
 
 Validate:
 ```bash
@@ -269,7 +278,12 @@ Pass the path to your `namelist.input` directly — the script copies it automat
 
 # Specify namelist + custom data root
 ./scripts/run_wrf.sh test001 namelist_examples/barranquilla/namelist.input /data/wrf
+
+# Specify number of MPI processes (dmpar builds only)
+./scripts/run_wrf.sh test001 namelist_examples/barranquilla/namelist.input /mnt/data 8
 ```
+
+The script automatically detects whether the image was compiled in serial or dmpar mode and uses `mpirun` accordingly — no manual changes needed.
 
 Monitor progress:
 
