@@ -81,6 +81,8 @@ nohup docker run --rm \
     wrf-compiled:latest \
     bash -c "
         set -e
+        START_TIME=\$(date '+%Y-%m-%d %H:%M:%S')
+        echo \"=== Simulation started at: \$START_TIME ===\"
         cd /wrf/WRF/test/em_real && \
         rm -f rsl.* && \
         mkdir -p /experimento/output && \
@@ -92,6 +94,8 @@ nohup docker run --rm \
         echo '--- Step 2: wrf.exe (mode: $WRF_MODE) ---' && \
         $WRF_RUN_CMD && \
         cp wrfout_d01* /experimento/output/ && \
+        END_TIME=\$(date '+%Y-%m-%d %H:%M:%S') && \
+        echo \"=== Simulation ended at:   \$END_TIME ===\" && \
         echo '--- SIMULATION COMPLETE ---'
     " > "$LOG_FILE" 2>&1 &
 
