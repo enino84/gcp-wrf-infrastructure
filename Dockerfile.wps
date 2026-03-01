@@ -26,12 +26,19 @@ ENV JASPERLIB=/wrf/grib2/lib
 ENV JASPERINC=/wrf/grib2/include
 ENV NETCDF=/usr
 
-# 4. Configure WPS (option 3 = Linux gfortran serial) and apply two patches:
+# 4. Configure WPS (option 3 = Linux gfortran serial) and apply patches:
+#    - Force serial compilers (FC=gfortran, CC=gcc): WPS always runs serial.
+#      When wrf-compiled was built with dmpar, the environment may expose mpif90
+#      as the default Fortran compiler, which breaks WPS configure. Forcing
+#      gfortran/gcc here ensures WPS always compiles in serial regardless of
+#      how the parent WRF image was built.
 #    - Disable LTO (-fno-lto): same linker fix as in Dockerfile.wrf
 #    - Fix NetCDF Fortran linking: Ubuntu's configure.wps omits -lnetcdff.
 #      Replacing -lnetcdf with -lnetcdff -lnetcdf ensures the Fortran interface
 #      is linked before the C library (order matters for the linker).
-RUN printf "3\n" | ./configure && \
+RUN FC=gfortran CC=gcc printf "3\n" | ./configure && \
+    sed -i 's/^FC\s*=.*/FC = gfortran/' configure.wps && \
+    sed -i 's/^CC\s*=.*/CC = gcc/' configure.wps && \
     sed -i 's/^FCOPTIM[ \t]*=.*/& -fno-lto/g' configure.wps && \
     sed -i 's/^CFLAGS_LOCAL[ \t]*=.*/& -fno-lto/g' configure.wps && \
     sed -i 's/^LDFLAGS_LOCAL[ \t]*=.*/& -fno-lto/g' configure.wps && \
