@@ -26,7 +26,7 @@ ENV JASPERLIB=/wrf/grib2/lib
 ENV JASPERINC=/wrf/grib2/include
 ENV NETCDF=/usr
 
-# 4. Configure WPS (option 3 = Linux gfortran serial) and apply patches:
+# 4. Configure WPS (option 1 = Linux gfortran serial) and apply patches:
 #    - Force serial compilers (FC=gfortran, CC=gcc): WPS always runs serial.
 #      When wrf-compiled was built with dmpar, the environment may expose mpif90
 #      as the default Fortran compiler, which breaks WPS configure. Forcing
@@ -45,9 +45,10 @@ RUN FC=gfortran CC=gcc printf "1\n" | ./configure && \
     sed -i 's/-lnetcdf/-lnetcdff -lnetcdf/g' configure.wps
 
 # 5. Compile WPS and validate executables
-# Executables end up as symlinks in /wrf/WPS/ (geogrid.exe, ungrib.exe, metgrid.exe)
 RUN echo "Starting WPS compilation..." && \
     ./compile && \
+    echo "--- Contents of /wrf/WPS/ after compile ---" && \
+    ls -la /wrf/WPS/ && \
     echo "--- Validating WPS executables ---" && \
     ls -l /wrf/WPS/geogrid.exe && \
     ls -l /wrf/WPS/ungrib.exe && \
