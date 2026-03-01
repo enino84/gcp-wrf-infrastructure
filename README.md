@@ -95,8 +95,8 @@ sudo chown "$USER:$USER" /mnt/data
 git clone https://github.com/enino84/gcp-wrf-infrastructure.git
 cd gcp-wrf-infrastructure
 
-# One-time only: make setup script executable, it will chmod the rest
-chmod +x scripts/setup_folders.sh
+# One-time only: make all scripts executable, it will chmod the rest
+chmod +x scripts/*.sh
 ```
 
 ---
