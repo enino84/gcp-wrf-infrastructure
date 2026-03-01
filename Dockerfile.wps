@@ -45,13 +45,13 @@ RUN FC=gfortran CC=gcc printf "1\n" | ./configure && \
     sed -i 's/-lnetcdf/-lnetcdff -lnetcdf/g' configure.wps
 
 # 5. Compile WPS and validate executables
-# Executables are in /wrf/WPS/{geogrid,ungrib,metgrid}/ — validate with absolute paths.
+# Executables end up as symlinks in /wrf/WPS/ (geogrid.exe, ungrib.exe, metgrid.exe)
 RUN echo "Starting WPS compilation..." && \
     ./compile && \
     echo "--- Validating WPS executables ---" && \
-    ls -l /wrf/WPS/geogrid/geogrid.exe && \
-    ls -l /wrf/WPS/ungrib/ungrib.exe && \
-    ls -l /wrf/WPS/metgrid/metgrid.exe && \
+    ls -l /wrf/WPS/geogrid.exe && \
+    ls -l /wrf/WPS/ungrib.exe && \
+    ls -l /wrf/WPS/metgrid.exe && \
     echo "--- WPS compilation successful ---" || \
     (echo "=== FATAL ERROR: WPS compilation failed ===" && \
      exit 1)
