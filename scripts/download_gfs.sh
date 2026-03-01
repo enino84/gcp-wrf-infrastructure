@@ -1,28 +1,37 @@
 #!/bin/bash
 # download_gfs.sh
 # Downloads GFS 0.25-degree GRIB2 files from NOAA NOMADS for a given date.
-# Usage: ./download_gfs.sh YYYYMMDD <case_name>
+# Usage: ./scripts/download_gfs.sh <YYYYMMDD> <case_name> [data_root]
+# Example: ./scripts/download_gfs.sh 20260227 test001
+# Example: ./scripts/download_gfs.sh 20260227 test001 /data/wrf
 
 set -e
 
 CYCLE="12"
 
 if [ -z "$1" ] || [ -z "$2" ]; then
-    echo "Usage: $0 YYYYMMDD <case_name>"
-    echo "Example: $0 20240815 my_experiment"
+    echo "Usage: $0 <YYYYMMDD> <case_name> [data_root]"
+    echo "  YYYYMMDD  : date to download (e.g. 20260227)"
+    echo "  case_name : name of the simulation case (e.g. test001)"
+    echo "  data_root : optional base path (default: /mnt/data)"
+    echo ""
+    echo "Example: $0 20260227 test001"
+    echo "Example: $0 20260227 test001 /data/wrf"
     exit 1
 fi
 
 DATE="$1"
 CASE_NAME="$2"
-DEST="/mnt/data/cases/$CASE_NAME/gfs_data"
+PROJECT_ROOT="${3:-/mnt/data}"
+DEST="$PROJECT_ROOT/cases/$CASE_NAME/gfs_data"
 
 mkdir -p "$DEST"
 
 echo "--- Downloading GFS data ---"
-echo "Date : $DATE"
-echo "Cycle: ${CYCLE}Z"
-echo "Dest : $DEST"
+echo "Date      : $DATE"
+echo "Cycle     : ${CYCLE}Z"
+echo "Case      : $CASE_NAME"
+echo "Dest      : $DEST"
 echo ""
 
 for fhr in 000 003 006 009 012 015 018 021 024; do
