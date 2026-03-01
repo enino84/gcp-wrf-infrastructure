@@ -23,7 +23,8 @@ gcp-wrf-infrastructure/
 │   ├── setup_folders.sh              # Creates host directory skeleton + chmod all scripts
 │   ├── download_gfs.sh               # Downloads GFS boundary data from NOAA NOMADS
 │   ├── run_wps.sh                    # Runs WPS pipeline (geogrid → ungrib → metgrid)
-│   └── run_wrf.sh                    # Runs real.exe + wrf.exe simulation
+│   ├── run_wrf.sh                    # Runs real.exe + wrf.exe simulation
+│   └── extract_vtable.sh             # Extracts a Vtable from the wps-compiled container
 ├── namelist_examples/
 │   ├── colombia/                     # Full country, 27 km
 │   ├── caribe-colombia/              # Caribbean region, 9 km
@@ -72,6 +73,8 @@ The system uses a staged build to isolate and resolve conflicting dependencies:
 | **Vtable** | GRIB variable table | `/mnt/data/cases/<case>/Vtable` |
 
 Download WPS_GEOG from [UCAR's WRF Users Page](https://www2.mmm.ucar.edu/wrf/users/download/get_sources_wps_geog.html).
+
+> **Where does the Vtable come from?** Vtables map GRIB2 variable codes to WPS field names. They are bundled inside the `wps-compiled` Docker image as part of the WPS source code — you do not need to download them. `run_wps.sh` extracts `Vtable.GFS` automatically if none is present. To extract one manually, use `extract_vtable.sh`.
 
 ### Host Filesystem Permissions
 
@@ -200,7 +203,24 @@ Outputs: `/mnt/data/cases/<case>/gfs_data/`
 
 ---
 
-### Step 5 — Run WPS Pre-processing
+### Step 5 — Extract Vtable (optional)
+
+The `run_wps.sh` script extracts `Vtable.GFS` automatically if none is present in the case directory. You only need this step if you want to use a different Vtable (e.g. ERA5) or inspect available options.
+
+```bash
+# List all available Vtables inside the container
+./scripts/extract_vtable.sh --list
+
+# Extract Vtable.GFS (default — matches download_gfs.sh data)
+./scripts/extract_vtable.sh test001
+
+# Extract a different Vtable
+./scripts/extract_vtable.sh test001 Vtable.ERA5
+```
+
+---
+
+### Step 6 — Run WPS Pre-processing
 
 Pass the path to your `namelist.wps` directly — the script copies it to the right place automatically. If no `Vtable` is provided, it extracts `Vtable.GFS` from the container.
 
@@ -234,7 +254,7 @@ Outputs: `/mnt/data/cases/<case>/output/`
 
 ---
 
-### Step 6 — Run WRF Simulation
+### Step 7 — Run WRF Simulation
 
 > 💡 **Why `nohup`?** WRF simulations run for hours. The script uses `nohup` internally so the simulation survives terminal disconnects and SSH session drops.
 
@@ -275,8 +295,8 @@ All containers are stateless. Data persists on the host via Docker volume mounts
 
 | Host Path | Container Path | Used In |
 |---|---|---|
-| `/mnt/data/WPS_GEOG/WPS_GEOG_FULL` | `/geog` | WPS (Step 5) |
-| `/mnt/data/cases/<case>` | `/experimento` | WPS (Step 5) + WRF (Step 6) |
+| `/mnt/data/WPS_GEOG/WPS_GEOG_FULL` | `/geog` | WPS (Step 6) |
+| `/mnt/data/cases/<case>` | `/experimento` | WPS (Step 6) + WRF (Step 7) |
 
 ---
 
