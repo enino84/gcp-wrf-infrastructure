@@ -46,7 +46,7 @@ RUN FC=gfortran CC=gcc printf "1\n" | ./configure && \
 
 # 5. Compile WPS and validate executables
 RUN echo "Starting WPS compilation..." && \
-    ./compile && \
+    ./compile all && \
     echo "--- Contents of /wrf/WPS/ after compile ---" && \
     ls -la /wrf/WPS/ && \
     echo "--- Validating WPS executables ---" && \
