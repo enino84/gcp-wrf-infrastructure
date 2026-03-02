@@ -17,14 +17,18 @@ This repository provides a fully reproducible Docker-based pipeline to compile a
 ```text
 gcp-wrf-infrastructure/
 ├── Dockerfile.libs                   # Stage 1: base libraries (Jasper, NetCDF, compilers)
-├── Dockerfile.wrf                    # Stage 2: WRF v4.5.2 compilation
+├── Dockerfile.wrf                    # Stage 2: WRF v4.5.2 compilation  [--build-arg WRF_MODE=dmpar]
 ├── Dockerfile.wps                    # Stage 3: WPS v4.5 compilation
+├── Dockerfile.postprocess            # Stage 4: post-processing image (Python + cartopy + ffmpeg)
+├── post_processor.py                 # Post-processing script (images + animations + HTML report)
+├── logo.png                          # Learn-DA logo (embedded in report and plots)
 ├── scripts/
 │   ├── setup_folders.sh              # Creates host directory skeleton + chmod all scripts
 │   ├── download_gfs.sh               # Downloads GFS boundary data from NOAA NOMADS
 │   ├── run_wps.sh                    # Runs WPS pipeline (geogrid → ungrib → metgrid)
 │   ├── run_wrf.sh                    # Runs real.exe + wrf.exe simulation
-│   └── extract_vtable.sh             # Extracts a Vtable from the wps-compiled container
+│   ├── extract_vtable.sh             # Extracts a Vtable from the wps-compiled container
+│   └── run_postprocess.sh            # Runs post-processor: images + animations + HTML report
 ├── namelist_examples/
 │   ├── colombia/                     # Full country, 27 km
 │   ├── caribe-colombia/              # Caribbean region, 9 km
@@ -328,6 +332,44 @@ Ready-to-use namelists for different domains. Copy to your case directory and **
 **Physics note:** Domains ≥ 9 km use `cu_physics = 6` (Tiedtke cumulus scheme). Domains at 3 km use `cu_physics = 0` — at convection-permitting resolution the model resolves convection explicitly.
 
 **Time step rule:** `dt ≤ 6 × dx(km)` seconds. Already set correctly in each example (27 km → 162 s, 9 km → 54 s, 3 km → 18 s).
+
+---
+
+## Stage 4 — Post-processing
+
+Build the post-processing image once:
+
+```bash
+docker build -f Dockerfile.postprocess -t postprocess:latest .
+```
+
+### Step 8 — Generate Products
+
+```bash
+./scripts/run_postprocess.sh <case_name> [context]
+
+# Example — Colombia simulation:
+./scripts/run_postprocess.sh test001 "Colombia"
+
+# Example — Barranquilla:
+./scripts/run_postprocess.sh test001 "Barranquilla — 3 km"
+
+# Example — custom data root:
+./scripts/run_postprocess.sh test001 "Colombia" /data/wrf
+```
+
+The `context` label appears in all plot titles and the HTML report header. Use it to describe the domain — e.g. `"Colombia"`, `"Región Caribe"`, `"Barranquilla — 3 km"`.
+
+**Products written to `/mnt/data/cases/<case>/plots/`:**
+
+| File | Description |
+|---|---|
+| `rain_accumulated.png` | Total accumulated precipitation (mm) |
+| `t2_max.png` | Daily maximum temperature at 2 m (°C) |
+| `wind10m.png` | 10 m wind speed + vectors (last time step) |
+| `animation_t2.mp4` | 2-m temperature time series animation |
+| `animation_wind10m.mp4` | 10-m wind speed + vectors animation |
+| `report.html` | Self-contained HTML report with all products embedded |
 
 ---
 

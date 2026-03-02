@@ -1,0 +1,34 @@
+FROM python:3.11-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# System dependencies: ffmpeg for animations, cartopy deps
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    libgeos-dev \
+    libproj-dev \
+    proj-data \
+    proj-bin \
+    libgdal-dev \
+    gcc \
+    g++ \
+    && apt-get clean
+
+# Python dependencies
+RUN pip install --no-cache-dir \
+    numpy \
+    matplotlib \
+    xarray \
+    netCDF4 \
+    cartopy \
+    pillow \
+    pandas \
+    scipy
+
+WORKDIR /postprocess
+
+# Copy logo and post-processing scripts into the image
+COPY logo.png /postprocess/logo.png
+COPY post_processor/post_processor.py /postprocess/post_processor.py
+
+CMD ["python", "post_processor.py"]
