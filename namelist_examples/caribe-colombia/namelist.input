@@ -14,7 +14,7 @@
  interval_seconds                    = 10800,
  input_from_file                     = .true.,
  history_interval                    = 60,
- frames_per_outfile                  = 24,
+ frames_per_outfile                  = 1,
  restart                             = .false.,
  restart_interval                    = 7200,
  io_form_history                     = 2,
