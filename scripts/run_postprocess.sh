@@ -52,13 +52,16 @@ fi
 mkdir -p "$OUTPUT_DIR"
 
 docker run --rm \
-    -v "$INPUT_DIR":/data:ro \
+    -v "$INPUT_DIR":/data \
     -v "$OUTPUT_DIR":/output \
     postprocess:latest \
-    python /postprocess/post_processor.py \
-        --input  /data \
-        --output /output \
-        --context "$CONTEXT"
+    bash -c "
+        cd /data && \
+        python /postprocess/post_processor.py \
+            --input  /data \
+            --output /output \
+            --context '$CONTEXT'
+    "
 
 echo ""
 echo "--- Post-processing complete ---"

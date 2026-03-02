@@ -57,7 +57,10 @@ if not files:
     sys.exit(1)
 
 print(f"Found {len(files)} wrfout file(s). Loading...")
-ds = xr.open_mfdataset(files, concat_dim="Time", combine="nested")
+try:
+    ds = xr.open_mfdataset(files, concat_dim="Time", combine="nested", engine="scipy")
+except Exception:
+    ds = xr.open_mfdataset(files, concat_dim="Time", combine="nested", engine="h5netcdf")
 
 lats = ds["XLAT"].isel(Time=0).values
 lons = ds["XLONG"].isel(Time=0).values
