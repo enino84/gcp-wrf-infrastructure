@@ -298,7 +298,7 @@ generated.append({"type": "image", "file": fname, "title": "10 m Wind Speed & Di
 
 
 # ============================================================
-# 4. ANIMATION — 2-m TEMPERATURE
+# 4. ANIMATION — 2-m TEMPERATURE (no nonlocal)
 # ============================================================
 print("[4/5] Animation: 2-m temperature...")
 if nframes < 2:
@@ -313,30 +313,39 @@ else:
     ax.add_feature(cfeature.BORDERS, linewidth=0.6)
     title_anim = ax.set_title("", fontsize=13)
 
-    children_before = set(ax.get_children())
-    cf0 = ax.contourf(lons, lats, T2[0], levels=LEVELS_T,
-                      cmap="turbo", extend="both", transform=proj)
-    children_after = set(ax.get_children())
-    current_cf = list(children_after - children_before)
+    state = {"artists": []}
+
+    # First frame
+    before = set(ax.get_children())
+    cf0 = ax.contourf(
+        lons, lats, T2[0], levels=LEVELS_T,
+        cmap="turbo", extend="both", transform=proj
+    )
+    after = set(ax.get_children())
+    state["artists"] = list(after - before)
+
     cbar = plt.colorbar(cf0, orientation="horizontal", pad=0.05, shrink=0.9)
     cbar.set_label("2-m Temperature (°C)")
     add_logo(fig)
 
     def update_t2(t):
-        nonlocal current_cf
-        for a in current_cf:
+        for a in state["artists"]:
             try:
                 a.remove()
             except Exception:
                 pass
-        before = set(ax.get_children())
-        ax.contourf(lons, lats, T2[t], levels=LEVELS_T,
-                    cmap="turbo", extend="both", transform=proj)
-        after = set(ax.get_children())
-        current_cf = list(after - before)
+
+        before_ = set(ax.get_children())
+        ax.contourf(
+            lons, lats, T2[t], levels=LEVELS_T,
+            cmap="turbo", extend="both", transform=proj
+        )
+        after_ = set(ax.get_children())
+        state["artists"] = list(after_ - before_)
+
         ts = times_local[t].strftime("%Y-%m-%d %H:%M")
         title_anim.set_text(f"{CONTEXT}  |  2 m Temperature\n{ts} local time")
-        return current_cf
+        return state["artists"]
 
     ani_t2 = animation.FuncAnimation(fig, update_t2, frames=nframes, interval=300, blit=False)
     if shutil.which("ffmpeg"):
@@ -351,7 +360,7 @@ else:
 
 
 # ============================================================
-# 5. ANIMATION — 10-m WIND
+# 5. ANIMATION — 10-m WIND (no nonlocal)
 # ============================================================
 print("[5/5] Animation: 10-m wind...")
 if nframes < 2:
@@ -369,36 +378,49 @@ else:
     title_wind = ax.set_title("", fontsize=13)
 
     skip = 8
-    children_before = set(ax.get_children())
-    cf_w0 = ax.contourf(lons, lats, WS10[0], levels=LEVELS_W,
-                        cmap="turbo", extend="max", transform=proj)
-    ax.quiver(lons[::skip, ::skip], lats[::skip, ::skip],
-              U10_all[0][::skip, ::skip], V10_all[0][::skip, ::skip],
-              transform=proj, scale=450, width=0.0022)
-    children_after = set(ax.get_children())
-    current_wind = list(children_after - children_before)
+    state = {"artists": []}
+
+    # First frame
+    before = set(ax.get_children())
+    cf_w0 = ax.contourf(
+        lons, lats, WS10[0], levels=LEVELS_W,
+        cmap="turbo", extend="max", transform=proj
+    )
+    ax.quiver(
+        lons[::skip, ::skip], lats[::skip, ::skip],
+        U10_all[0][::skip, ::skip], V10_all[0][::skip, ::skip],
+        transform=proj, scale=450, width=0.0022
+    )
+    after = set(ax.get_children())
+    state["artists"] = list(after - before)
+
     cbar_w = plt.colorbar(cf_w0, orientation="horizontal", pad=0.05, shrink=0.9)
     cbar_w.set_label("10-m Wind Speed (m/s)")
     add_logo(fig)
 
     def update_wind(t):
-        nonlocal current_wind
-        for a in current_wind:
+        for a in state["artists"]:
             try:
                 a.remove()
             except Exception:
                 pass
-        before = set(ax.get_children())
-        ax.contourf(lons, lats, WS10[t], levels=LEVELS_W,
-                    cmap="turbo", extend="max", transform=proj)
-        ax.quiver(lons[::skip, ::skip], lats[::skip, ::skip],
-                  U10_all[t][::skip, ::skip], V10_all[t][::skip, ::skip],
-                  transform=proj, scale=450, width=0.0022)
-        after = set(ax.get_children())
-        current_wind = list(after - before)
+
+        before_ = set(ax.get_children())
+        ax.contourf(
+            lons, lats, WS10[t], levels=LEVELS_W,
+            cmap="turbo", extend="max", transform=proj
+        )
+        ax.quiver(
+            lons[::skip, ::skip], lats[::skip, ::skip],
+            U10_all[t][::skip, ::skip], V10_all[t][::skip, ::skip],
+            transform=proj, scale=450, width=0.0022
+        )
+        after_ = set(ax.get_children())
+        state["artists"] = list(after_ - before_)
+
         ts = times_local[t].strftime("%Y-%m-%d %H:%M")
         title_wind.set_text(f"{CONTEXT}  |  10 m Wind Speed + Vectors\n{ts} local time")
-        return current_wind
+        return state["artists"]
 
     ani_wind = animation.FuncAnimation(fig, update_wind, frames=nframes, interval=300, blit=False)
     if shutil.which("ffmpeg"):
