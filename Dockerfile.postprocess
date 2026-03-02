@@ -10,6 +10,8 @@ RUN apt-get update && apt-get install -y \
     proj-data \
     proj-bin \
     libgdal-dev \
+    libhdf5-dev \
+    libnetcdf-dev \
     gcc \
     g++ \
     && apt-get clean
@@ -30,6 +32,6 @@ WORKDIR /postprocess
 
 # Copy logo and post-processing scripts into the image
 COPY logo.png /postprocess/logo.png
-COPY post_processor/post_processor.py /postprocess/post_processor.py
+COPY post_processor.py /postprocess/post_processor.py
 
 CMD ["python", "post_processor.py"]
