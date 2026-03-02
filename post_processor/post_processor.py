@@ -52,31 +52,13 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 # Rename files replacing ':' with '_' — colons in filenames cause
 # netCDF4/HDF5 to fail when files are accessed inside Docker containers.
 # ============================================================
-import tempfile, shutil as _shutil
-
 pattern = str(INPUT_DIR / "wrfout_d01_*")
-files_orig = sorted(glob(pattern))
-if not files_orig:
+files = sorted(glob(pattern))
+if not files:
     print(f"ERROR: No wrfout_d01_* files found in {INPUT_DIR}")
     sys.exit(1)
 
-print(f"Found {len(files_orig)} wrfout file(s). Loading...")
-
-# Copy files to /output/tmp_nc with safe names (replace ':' with '-')
-# /tmp inside Docker has limited tmpfs space (~64MB); use the mounted output dir instead.
-_tmpdir = str(OUTPUT_DIR / "tmp_nc")
-os.makedirs(_tmpdir, exist_ok=True)
-files = []
-for src in files_orig:
-    safe_name = Path(src).name.replace(":", "-")
-    dst = os.path.join(_tmpdir, safe_name)
-    if not os.path.exists(dst):
-        print(f"  Copying {Path(src).name} → {safe_name} ...")
-        _shutil.copy2(src, dst)
-    else:
-        print(f"  {safe_name} already exists, skipping copy")
-    files.append(dst)
-
+print(f"Found {len(files)} wrfout file(s). Loading...")
 ds = xr.open_mfdataset(files, concat_dim="Time", combine="nested")
 
 lats = ds["XLAT"].isel(Time=0).values
