@@ -2,8 +2,7 @@ FROM python:3.11-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# System dependencies: ffmpeg for animations, cartopy deps
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     libgeos-dev \
     libproj-dev \
@@ -12,11 +11,11 @@ RUN apt-get update && apt-get install -y \
     libgdal-dev \
     libhdf5-dev \
     libnetcdf-dev \
+    netcdf-bin \
     gcc \
     g++ \
-    && apt-get clean
+ && rm -rf /var/lib/apt/lists/*
 
-# Python dependencies
 RUN pip install --no-cache-dir \
     numpy \
     matplotlib \
@@ -25,13 +24,10 @@ RUN pip install --no-cache-dir \
     cartopy \
     pillow \
     pandas \
-    netcdf4 \
     scipy
 
 WORKDIR /postprocess
-
-# Copy logo and post-processing scripts into the image
 COPY logo.png /postprocess/logo.png
 COPY post_processor/post_processor.py /postprocess/post_processor.py
 
-CMD ["python", "post_processor.py"]
+CMD ["python", "/postprocess/post_processor.py"]
