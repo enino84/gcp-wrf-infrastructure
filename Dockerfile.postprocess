@@ -23,8 +23,8 @@ RUN pip install --no-cache-dir \
     cartopy \
     pillow \
     pandas \
-    scipy \
-    h5netcdf
+    netcdf4 \
+    scipy
 
 WORKDIR /postprocess
 
