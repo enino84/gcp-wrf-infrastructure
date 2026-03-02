@@ -62,15 +62,20 @@ if not files_orig:
 
 print(f"Found {len(files_orig)} wrfout file(s). Loading...")
 
-# Copy files to a temp dir with safe names (replace ':' with '-')
-_tmpdir = tempfile.mkdtemp()
+# Copy files to /output/tmp_nc with safe names (replace ':' with '-')
+# /tmp inside Docker has limited tmpfs space (~64MB); use the mounted output dir instead.
+_tmpdir = str(OUTPUT_DIR / "tmp_nc")
+os.makedirs(_tmpdir, exist_ok=True)
 files = []
 for src in files_orig:
     safe_name = Path(src).name.replace(":", "-")
     dst = os.path.join(_tmpdir, safe_name)
-    _shutil.copy2(src, dst)
+    if not os.path.exists(dst):
+        print(f"  Copying {Path(src).name} → {safe_name} ...")
+        _shutil.copy2(src, dst)
+    else:
+        print(f"  {safe_name} already exists, skipping copy")
     files.append(dst)
-    print(f"  {Path(src).name} → {safe_name}")
 
 ds = xr.open_mfdataset(files, concat_dim="Time", combine="nested")
 
