@@ -22,10 +22,27 @@ RUN wget https://www2.mmm.ucar.edu/wrf/OnLineTutorial/compile_tutorial/tar_files
     make && \
     make install
 
-# 3. Environment variables pointing to the compiled libraries
+# 3. Compile PnetCDF from source
+#    PnetCDF enables parallel I/O for WRF wrfout files when running in dmpar mode.
+#    Without it, multiple MPI processes attempt to open the same file independently,
+#    causing "error opening wrfout for writing -1021" errors.
+#    Version 1.12.3 is the last stable release compatible with WRF 4.5.x.
+RUN wget https://parallel-netcdf.github.io/Release/pnetcdf-1.12.3.tar.gz && \
+    tar -xf pnetcdf-1.12.3.tar.gz && \
+    cd pnetcdf-1.12.3 && \
+    ./configure \
+        --prefix=/wrf/libs/pnetcdf \
+        --with-mpi=/usr \
+        CC=mpicc FC=mpif90 CXX=mpicxx \
+        CFLAGS="-fPIC" FFLAGS="-fPIC" && \
+    make -j 2 && \
+    make install
+
+# 4. Environment variables pointing to the compiled libraries
 ENV NETCDF=/usr
+ENV PNETCDF=/wrf/libs/pnetcdf
 ENV JASPERLIB=/wrf/libs/jasper/lib
 ENV JASPERINC=/wrf/libs/jasper/include
-ENV LD_LIBRARY_PATH="/wrf/libs/jasper/lib:$LD_LIBRARY_PATH"
+ENV LD_LIBRARY_PATH="/wrf/libs/jasper/lib:/wrf/libs/pnetcdf/lib:$LD_LIBRARY_PATH"
 
 WORKDIR /wrf

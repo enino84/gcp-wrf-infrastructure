@@ -14,9 +14,10 @@ WORKDIR /wrf/WRF
 # Select configure option based on WRF_MODE build argument.
 # Configure option 34 = gfortran/gcc serial
 # Configure option 33 = gfortran/gcc dmpar (MPI)
-# After configuration, patch configure.wrf to disable Link-Time Optimization (LTO).
-# LTO is enabled by default in Ubuntu 22.04's gcc/gfortran and causes linker errors
-# (ld: error: ...) during WRF compilation. Disabling it resolves this.
+# After configuration:
+#   - Disable LTO (-fno-lto): Ubuntu 22.04 gcc enables LTO by default, causing linker errors.
+#   - Add PNETCDF support: when WRF_MODE=dmpar, activate parallel NetCDF I/O so all MPI
+#     processes write wrfout files cooperatively instead of independently (avoids -1021 errors).
 RUN if [ "$WRF_MODE" = "dmpar" ]; then \
         echo "Configuring WRF in DMPAR (MPI parallel) mode..." && \
         printf "33\n1\n" | ./configure; \
@@ -26,7 +27,11 @@ RUN if [ "$WRF_MODE" = "dmpar" ]; then \
     fi && \
     sed -i 's/^FCOPTIM[ \t]*=.*/& -fno-lto/g' configure.wrf && \
     sed -i 's/^CFLAGS_LOCAL[ \t]*=.*/& -fno-lto/g' configure.wrf && \
-    sed -i 's/^LDFLAGS_LOCAL[ \t]*=.*/& -fno-lto/g' configure.wrf
+    sed -i 's/^LDFLAGS_LOCAL[ \t]*=.*/& -fno-lto/g' configure.wrf && \
+    if [ "$WRF_MODE" = "dmpar" ]; then \
+        echo "Enabling PnetCDF parallel I/O..." && \
+        sed -i 's|^PNETCDFPATH\s*=.*|PNETCDFPATH = /wrf/libs/pnetcdf|' configure.wrf; \
+    fi
 
 # Store the build mode so run scripts can detect it
 RUN echo "$WRF_MODE" > /wrf/WRF/.wrf_mode
