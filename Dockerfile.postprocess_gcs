@@ -1,0 +1,39 @@
+FROM python:3.11-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    libgeos-dev \
+    libproj-dev \
+    proj-data \
+    proj-bin \
+    libgdal-dev \
+    libhdf5-dev \
+    libnetcdf-dev \
+    netcdf-bin \
+    gcc \
+    g++ \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir \
+    numpy \
+    matplotlib \
+    xarray \
+    netCDF4 \
+    cartopy \
+    pillow \
+    pandas \
+    scipy \
+    google-cloud-storage
+
+WORKDIR /postprocess
+COPY logo.png /postprocess/logo.png
+COPY post_processor/post_processor_gcs.py /postprocess/post_processor_gcs.py
+
+# Auth via:
+#   - Workload Identity (GKE) — nothing to do
+#   - Service account key:
+#       docker run -e GOOGLE_APPLICATION_CREDENTIALS=/secrets/sa.json \
+#                  -v /path/to/sa.json:/secrets/sa.json ...
+CMD ["python", "/postprocess/post_processor_gcs.py", "--help"]

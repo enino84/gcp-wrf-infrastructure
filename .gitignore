@@ -1,2 +1,4 @@
 cases
-c
+*.log
+sa-learn-da.json
+.env

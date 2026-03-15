@@ -16,7 +16,7 @@
 #   ./scripts/run_wrf.sh test001
 #   ./scripts/run_wrf.sh test001 namelist_examples/barranquilla/namelist.input
 #   ./scripts/run_wrf.sh test001 namelist_examples/barranquilla/namelist.input /data/wrf
-#   ./scripts/run_wrf.sh test001 namelist_examples/barranquilla/namelist.input /mnt/data 8
+#   ./scripts/run_wrf.sh test001 namelist_examples/barranquilla/namelist.input /mnt/data 4
 
 if [ -z "$1" ]; then
     echo "Usage: $0 <case_name> [namelist_input] [data_root] [num_procs]"
@@ -64,10 +64,9 @@ if [ "$WRF_MODE" = "dmpar" ]; then
         NUM_PROCS=$(docker run --rm wrf-compiled:latest nproc)
     fi
     echo "MPI processes  : $NUM_PROCS"
-    WRF_RUN_CMD="mpirun -np $NUM_PROCS ./wrf.exe"
 else
+    NUM_PROCS=1
     echo "MPI processes  : 1 (serial build)"
-    WRF_RUN_CMD="./wrf.exe"
 fi
 
 echo ""
@@ -76,13 +75,16 @@ echo "Monitor with:  tail -f $LOG_FILE"
 echo "Ctrl+C stops monitoring — the simulation keeps running."
 echo ""
 
+# KEY FIX: $NUM_PROCS and $WRF_MODE are evaluated on the HOST (correct — they are
+# plain values). The if/else inside bash -c runs INSIDE the container so the
+# right executable is chosen without passing a variable command string.
 nohup docker run --rm \
     -v "$CASE_DIR":/experimento \
     wrf-compiled:latest \
     bash -c "
         set -e
         START_TIME=\$(date '+%Y-%m-%d %H:%M:%S')
-        echo \"=== Simulation started at: \$START_TIME ===\"
+        echo \"=== Simulation started at: \$START_TIME ===\" && \
         cd /wrf/WRF/test/em_real && \
         rm -f rsl.* && \
         mkdir -p /experimento/output && \
@@ -91,8 +93,12 @@ nohup docker run --rm \
         echo '--- Step 1: real.exe ---' && \
         ./real.exe && \
         cp wrfinput_d01 wrfbdy_d01 /experimento/output/ && \
-        echo '--- Step 2: wrf.exe (mode: $WRF_MODE) ---' && \
-        $WRF_RUN_CMD && \
+        echo '--- Step 2: wrf.exe (mode: $WRF_MODE, procs: $NUM_PROCS) ---' && \
+        if [ "$WRF_MODE" = "dmpar" ] && [ $NUM_PROCS -gt 1 ]; then \
+            mpirun -np $NUM_PROCS ./wrf.exe ; \
+        else \
+            ./wrf.exe ; \
+        fi && \
         cp wrfout_d01* /experimento/output/ && \
         END_TIME=\$(date '+%Y-%m-%d %H:%M:%S') && \
         echo \"=== Simulation ended at:   \$END_TIME ===\" && \
