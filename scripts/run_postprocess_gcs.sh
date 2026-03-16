@@ -3,20 +3,21 @@
 # Runs the WRF GCS post-processor — generates images/animations and uploads to GCS.
 #
 # Usage:
-#   ./scripts/run_postprocess_gcs.sh <case_name> <app_id> [context] [data_root] [gcs_bucket] [sa_key]
+#   ./scripts/run_postprocess_gcs.sh <case_name> <app_id> [context] [config] [data_root] [gcs_bucket] [sa_key]
 #
 # Arguments:
 #   case_name  : simulation case name         (e.g. colombia-27km-20260314)
 #   app_id     : GCS app identifier           (e.g. wrf-colombia-27km)
 #   context    : label for plot titles        (default: "WRF Simulation")
+#   config     : config JSON filename         (default: colombia.json)
 #   data_root  : base data path               (default: /mnt/data)
 #   gcs_bucket : GCS bucket name              (default: learn-da-data)
 #   sa_key     : path to service account key  (default: none — uses ADC/Workload Identity)
 #
 # Examples:
 #   ./scripts/run_postprocess_gcs.sh colombia-27km-20260314 wrf-colombia-27km "WRF Colombia 27km"
-#   ./scripts/run_postprocess_gcs.sh colombia-27km-20260314 wrf-colombia-27km "WRF Colombia 27km" /mnt/data learn-da-data /secrets/sa.json
-#   ./scripts/run_postprocess_gcs.sh test003 wrf-colombia-27km "Test 27km" /mnt/data learn-da-data
+#   ./scripts/run_postprocess_gcs.sh colombia-27km-20260314 wrf-colombia-27km "WRF Colombia 27km" colombia.json
+#   ./scripts/run_postprocess_gcs.sh baq-3km-20260314 wrf-barranquilla-3km "WRF Baq 3km" barranquilla.json /mnt/data learn-da-data /secrets/sa.json
 
 set -e
 
@@ -35,9 +36,10 @@ fi
 CASE_NAME="$1"
 APP_ID="$2"
 CONTEXT="${3:-WRF Simulation}"
-PROJECT_ROOT="${4:-/mnt/data}"
-GCS_BUCKET="${5:-learn-da-data}"
-SA_KEY="${6:-}"
+CONFIG="${4:-colombia.json}"
+PROJECT_ROOT="${5:-/mnt/data}"
+GCS_BUCKET="${6:-learn-da-data}"
+SA_KEY="${7:-}"
 
 CASE_DIR="$PROJECT_ROOT/cases/$CASE_NAME"
 INPUT_DIR="$CASE_DIR/output"
@@ -48,6 +50,7 @@ echo "  WRF GCS Post-processor"
 echo "  Case     : $CASE_NAME"
 echo "  App ID   : $APP_ID"
 echo "  Context  : $CONTEXT"
+echo "  Config   : $CONFIG"
 echo "  Input    : $INPUT_DIR"
 echo "  Output   : $OUTPUT_DIR"
 echo "  Bucket   : gs://$GCS_BUCKET"
@@ -86,10 +89,11 @@ fi
 docker run "${DOCKER_ARGS[@]}" \
     postprocess-gcs:latest \
     python /postprocess/post_processor_gcs.py \
-        --input   /data \
-        --output  /output \
-        --app     "$APP_ID" \
-        --context "$CONTEXT" \
+        --input      /data \
+        --output     /output \
+        --app        "$APP_ID" \
+        --config     "/postprocess/configs/$CONFIG" \
+        --context    "$CONTEXT" \
         --gcs-bucket "$GCS_BUCKET"
 
 echo ""

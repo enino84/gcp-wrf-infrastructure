@@ -30,6 +30,7 @@ RUN pip install --no-cache-dir \
 WORKDIR /postprocess
 COPY logo.png /postprocess/logo.png
 COPY post_processor/post_processor_gcs.py /postprocess/post_processor_gcs.py
+COPY post_processor/configs/ /postprocess/configs/
 
 # Auth via:
 #   - Workload Identity (GKE) — nothing to do

@@ -1,0 +1,60 @@
+{
+  "language": "en",
+  "timezone_offset_hours": -5,
+  "timezone_label": "Colombia time (UTC-5)",
+
+  "cities": {
+    "Barranquilla": {"lat": 10.96, "lon": -74.80, "region": "Caribbean", "dept": "Atlántico"},
+    "Cartagena":    {"lat": 10.39, "lon": -75.51, "region": "Caribbean", "dept": "Bolívar"},
+    "Santa Marta":  {"lat": 11.24, "lon": -74.20, "region": "Caribbean", "dept": "Magdalena"},
+    "Riohacha":     {"lat": 11.54, "lon": -72.91, "region": "Caribbean", "dept": "La Guajira"},
+    "Valledupar":   {"lat": 10.48, "lon": -73.25, "region": "Inland",    "dept": "Cesar"},
+    "Bogotá":       {"lat":  4.71, "lon": -74.07, "region": "Andean",    "dept": "Cundinamarca"},
+    "Medellín":     {"lat":  6.25, "lon": -75.56, "region": "Andean",    "dept": "Antioquia"}
+  },
+
+  "regions": {
+    "Caribbean": {"color": "#00d4ff", "palette": ["#00d4ff","#0099cc","#006699"]},
+    "Inland":    {"color": "#ffcc00", "palette": ["#ffcc00","#ffaa00"]},
+    "Andean":    {"color": "#ff6b35", "palette": ["#ff6b35","#cc4400"]}
+  },
+
+  "labels": {
+    "rain_accumulated":  "Accumulated Rainfall",
+    "rain_accumulated_unit": "Accumulated precipitation (mm)",
+    "t2_max":            "Maximum 2m Temperature",
+    "t2_max_unit":       "Max T2 (°C)",
+    "wind10m":           "10m Wind",
+    "wind10m_unit":      "10m wind speed (m/s)",
+    "wind10m_last":      "last time step",
+    "t2_series":         "2m Temperature (°C)",
+    "ws10_series":       "10m Wind Speed (m/s)",
+    "rain_hr_series":    "Hourly Precipitation (mm/h)",
+    "q2_series":         "Specific Humidity (g/kg)",
+    "psfc_series":       "Surface Pressure (hPa)",
+    "swdown_series":     "Solar Radiation (W/m²)",
+    "cities_prefix":     "Cities",
+    "regions_prefix":    "Regions",
+    "city_legend":       "City",
+    "region_legend":     "Region",
+    "time_axis":         "Colombia time (UTC-5)",
+    "daily_cycle":       "Daily T2 Cycle",
+    "climate_profile":   "Climate Profile",
+    "rain_prob_cities":  "Rainfall Probability — Cities",
+    "rain_prob_regions": "Rainfall Probability — Regions",
+    "rain_prob_axis":    "Probability (%)",
+    "rain_intensity_labels": ["Drizzle\n≥0.1 mm/h", "Light\n≥1 mm/h", "Moderate\n≥5 mm/h", "Heavy\n≥10 mm/h"],
+    "radar_axes":        ["Temperature", "Wind", "Rain", "Humidity", "Radiation"],
+    "t2_box_unit":       "T2 (°C)",
+    "local_hour":        "Local hour",
+    "normalized_vars":   "Normalized variables",
+    "anim_t2":           "2m Temperature (°C)",
+    "anim_wind":         "10m Wind Speed (m/s)",
+    "anim_rain_hr":      "Hourly Precipitation (mm/h)",
+    "anim_rh":           "Relative Humidity (%)",
+    "anim_swdown":       "Solar Radiation (W/m²)",
+    "anim_td":           "Dew Point (°C)",
+    "anim_cape":         "CAPE (J/kg)",
+    "website":           "www.learn-da.com"
+  }
+}
