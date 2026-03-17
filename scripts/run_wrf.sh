@@ -1,30 +1,11 @@
 #!/bin/bash
-# run_wrf.sh
+# run_wrf_nohup.sh
 # Runs real.exe + wrf.exe inside the wrf-compiled container.
-# Uses nohup so the simulation survives terminal disconnects and SSH drops.
+# NO nohup → blocking execution (recommended for pipelines).
 # Automatically detects serial vs dmpar (MPI) compilation mode.
-#
-# Usage: ./scripts/run_wrf.sh <case_name> [namelist_input] [data_root] [num_procs]
-#
-# Arguments:
-#   case_name      : name of the simulation case (e.g. test001)
-#   namelist_input : path to namelist.input (default: namelist_examples/colombia/namelist.input)
-#   data_root      : base data path         (default: /mnt/data)
-#   num_procs      : number of MPI processes (default: all cores via nproc, dmpar only)
-#
-# Examples:
-#   ./scripts/run_wrf.sh test001
-#   ./scripts/run_wrf.sh test001 namelist_examples/barranquilla/namelist.input
-#   ./scripts/run_wrf.sh test001 namelist_examples/barranquilla/namelist.input /data/wrf
-#   ./scripts/run_wrf.sh test001 namelist_examples/barranquilla/namelist.input /mnt/data 4
 
 if [ -z "$1" ]; then
     echo "Usage: $0 <case_name> [namelist_input] [data_root] [num_procs]"
-    echo ""
-    echo "  case_name      : simulation case name (e.g. test001)"
-    echo "  namelist_input : path to namelist.input (default: namelist_examples/colombia/namelist.input)"
-    echo "  data_root      : base data path         (default: /mnt/data)"
-    echo "  num_procs      : MPI processes to use   (default: all cores, dmpar builds only)"
     exit 1
 fi
 
@@ -32,6 +13,7 @@ CASE_NAME="$1"
 NAMELIST_INPUT="${2:-namelist_examples/colombia/namelist.input}"
 PROJECT_ROOT="${3:-/mnt/data}"
 NUM_PROCS="${4:-0}"
+
 CASE_DIR="$PROJECT_ROOT/cases/$CASE_NAME"
 LOG_FILE="$CASE_DIR/simulation.log"
 
@@ -41,21 +23,21 @@ echo "namelist.input : $NAMELIST_INPUT"
 echo "Log file       : $LOG_FILE"
 echo ""
 
-# --- Validate and copy namelist.input ---
+# --- Validate namelist ---
 if [ ! -f "$NAMELIST_INPUT" ]; then
     echo "ERROR: namelist.input not found: $NAMELIST_INPUT"
     exit 1
 fi
-echo "Copying $NAMELIST_INPUT -> $CASE_DIR/namelist.input"
+
+mkdir -p "$CASE_DIR/output"
 cp "$NAMELIST_INPUT" "$CASE_DIR/namelist.input"
 
-# --- Validate met_em files ---
+# --- Validate met_em ---
 if [ -z "$(ls "$CASE_DIR/output"/met_em.d01.* 2>/dev/null)" ]; then
     echo "WARNING: No met_em files found in $CASE_DIR/output/"
-    echo "Did you run run_wps.sh first?"
 fi
 
-# --- Detect serial vs dmpar from image ---
+# --- Detect WRF mode ---
 WRF_MODE=$(docker run --rm wrf-compiled:latest cat /wrf/WRF/.wrf_mode 2>/dev/null || echo "serial")
 echo "WRF build mode : $WRF_MODE"
 
@@ -63,46 +45,57 @@ if [ "$WRF_MODE" = "dmpar" ]; then
     if [ "$NUM_PROCS" -eq 0 ]; then
         NUM_PROCS=$(docker run --rm wrf-compiled:latest nproc)
     fi
-    echo "MPI processes  : $NUM_PROCS"
 else
     NUM_PROCS=1
-    echo "MPI processes  : 1 (serial build)"
 fi
 
-echo ""
-echo "Launching WRF in background with nohup."
-echo "Monitor with:  tail -f $LOG_FILE"
-echo "Ctrl+C stops monitoring — the simulation keeps running."
+echo "MPI processes  : $NUM_PROCS"
 echo ""
 
-# KEY FIX: $NUM_PROCS and $WRF_MODE are evaluated on the HOST (correct — they are
-# plain values). The if/else inside bash -c runs INSIDE the container so the
-# right executable is chosen without passing a variable command string.
-nohup docker run --rm \
+echo "Running WRF in FOREGROUND (pipeline-friendly)"
+echo "Logs: $LOG_FILE"
+echo ""
+
+# --- Run container (NO nohup) ---
+docker run --rm \
+    --name "wrf_${CASE_NAME}" \
     -v "$CASE_DIR":/experimento \
     wrf-compiled:latest \
     bash -c "
         set -e
-        START_TIME=\$(date '+%Y-%m-%d %H:%M:%S')
-        echo \"=== Simulation started at: \$START_TIME ===\" && \
-        cd /wrf/WRF/test/em_real && \
-        rm -f rsl.* && \
-        mkdir -p /experimento/output && \
-        cp /experimento/namelist.input . && \
-        cp /experimento/output/met_em.d01.* . && \
-        echo '--- Step 1: real.exe ---' && \
-        ./real.exe && \
-        cp wrfinput_d01 wrfbdy_d01 /experimento/output/ && \
-        echo '--- Step 2: wrf.exe (mode: $WRF_MODE, procs: $NUM_PROCS) ---' && \
-        if [ "$WRF_MODE" = "dmpar" ] && [ $NUM_PROCS -gt 1 ]; then \
-            mpirun -np $NUM_PROCS ./wrf.exe ; \
-        else \
-            ./wrf.exe ; \
-        fi && \
-        cp wrfout_d01* /experimento/output/ && \
-        END_TIME=\$(date '+%Y-%m-%d %H:%M:%S') && \
-        echo \"=== Simulation ended at:   \$END_TIME ===\" && \
-        echo '--- SIMULATION COMPLETE ---'
-    " > "$LOG_FILE" 2>&1 &
 
-echo "WRF is running (PID: $!)"
+        export OMP_NUM_THREADS=1
+        export OMP_PROC_BIND=true
+
+        START_TIME=\$(date '+%Y-%m-%d %H:%M:%S')
+        echo \"=== Simulation started at: \$START_TIME ===\"
+
+        cd /wrf/WRF/test/em_real
+        rm -f rsl.*
+
+        mkdir -p /experimento/output
+        cp /experimento/namelist.input .
+        cp /experimento/output/met_em.d01.* .
+
+        echo '--- Step 1: real.exe ---'
+        ./real.exe
+
+        cp wrfinput_d01 wrfbdy_d01 /experimento/output/
+
+        echo '--- Step 2: wrf.exe ---'
+
+        if [ \"$WRF_MODE\" = \"dmpar\" ] && [ $NUM_PROCS -gt 1 ]; then
+            mpirun -np $NUM_PROCS ./wrf.exe
+        else
+            ./wrf.exe
+        fi
+
+        cp wrfout_d01* /experimento/output/
+
+        END_TIME=\$(date '+%Y-%m-%d %H:%M:%S')
+        echo \"=== Simulation ended at: \$END_TIME ===\"
+        echo '--- SIMULATION COMPLETE ---'
+    " 2>&1 | tee "$LOG_FILE"
+
+echo ""
+echo "WRF finished successfully for case: $CASE_NAME"
