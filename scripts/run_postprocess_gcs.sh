@@ -19,14 +19,15 @@
 #   ./scripts/run_postprocess_gcs.sh colombia-27km-20260314 wrf-colombia-27km "WRF Colombia 27km" colombia.json
 #   ./scripts/run_postprocess_gcs.sh baq-3km-20260314 wrf-barranquilla-3km "WRF Baq 3km" barranquilla.json /mnt/data learn-da-data /secrets/sa.json
 
-set -e
+set -euo pipefail
 
-if [ -z "$1" ] || [ -z "$2" ]; then
-    echo "Usage: $0 <case_name> <app_id> [context] [data_root] [gcs_bucket] [sa_key]"
+if [ $# -lt 2 ]; then
+    echo "Usage: $0 <case_name> <app_id> [context] [config] [data_root] [gcs_bucket] [sa_key]"
     echo ""
     echo "  case_name  : e.g. colombia-27km-20260314"
     echo "  app_id     : e.g. wrf-colombia-27km | wrf-caribe-9km | wrf-barranquilla-3km"
     echo "  context    : label for titles (default: 'WRF Simulation')"
+    echo "  config     : config JSON filename (default: colombia.json)"
     echo "  data_root  : base data path (default: /mnt/data)"
     echo "  gcs_bucket : GCS bucket (default: learn-da-data)"
     echo "  sa_key     : /path/to/sa.json (optional, uses Workload Identity if omitted)"
@@ -58,29 +59,35 @@ echo "  GCS path : apps/$APP_ID/runs/..."
 echo "========================================"
 echo ""
 
-# Validate wrfout files
-if [ -z "$(ls "$INPUT_DIR"/wrfout_d01_* 2>/dev/null)" ]; then
+if [ ! -d "$INPUT_DIR" ]; then
+    echo "ERROR: Input directory does not exist: $INPUT_DIR"
+    exit 1
+fi
+
+if ! ls "$INPUT_DIR"/wrfout_d01_* >/dev/null 2>&1; then
     echo "ERROR: No wrfout_d01_* files found in $INPUT_DIR"
     exit 1
 fi
 
 mkdir -p "$OUTPUT_DIR"
 
-# Build docker run command
 DOCKER_ARGS=(
     "--rm"
     "--mount" "type=bind,source=$INPUT_DIR,target=/data"
     "--mount" "type=bind,source=$OUTPUT_DIR,target=/output"
 )
 
-# Mount service account key if provided
 if [ -n "$SA_KEY" ]; then
-    echo "Auth: service account key → $SA_KEY"
+    if [ ! -f "$SA_KEY" ]; then
+        echo "ERROR: Service account key file not found: $SA_KEY"
+        exit 1
+    fi
+
+    echo "Auth: service account key -> $SA_KEY"
     DOCKER_ARGS+=("-v" "$SA_KEY:/secrets/sa.json:ro")
     DOCKER_ARGS+=("-e" "GOOGLE_APPLICATION_CREDENTIALS=/secrets/sa.json")
 else
     echo "Auth: Application Default Credentials (Workload Identity or gcloud ADC)"
-    # Mount gcloud ADC if available locally
     if [ -f "$HOME/.config/gcloud/application_default_credentials.json" ]; then
         DOCKER_ARGS+=("-v" "$HOME/.config/gcloud:/root/.config/gcloud:ro")
     fi
@@ -89,11 +96,11 @@ fi
 docker run "${DOCKER_ARGS[@]}" \
     postprocess-gcs:latest \
     python /postprocess/post_processor_gcs.py \
-        --input      /data \
-        --output     /output \
-        --app        "$APP_ID" \
-        --config     "/postprocess/configs/$CONFIG" \
-        --context    "$CONTEXT" \
+        --input /data \
+        --output /output \
+        --app "$APP_ID" \
+        --config "/postprocess/configs/$CONFIG" \
+        --context "$CONTEXT" \
         --gcs-bucket "$GCS_BUCKET"
 
 echo ""

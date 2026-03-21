@@ -1,28 +1,28 @@
 #!/bin/bash
 # download_gfs.sh
 # Downloads GFS 0.25-degree GRIB2 files from NOAA NOMADS for a given date.
-# Usage: ./scripts/download_gfs.sh <YYYYMMDD> <case_name> [data_root]
+# Usage: ./scripts/download_gfs.sh <YYYYMMDD> <case_name> [data_root] [cycle]
 # Example: ./scripts/download_gfs.sh 20260227 test001
-# Example: ./scripts/download_gfs.sh 20260227 test001 /data/wrf
+# Example: ./scripts/download_gfs.sh 20260227 test001 /data/wrf 00
 
 set -e
 
-CYCLE="12"
-
 if [ -z "$1" ] || [ -z "$2" ]; then
-    echo "Usage: $0 <YYYYMMDD> <case_name> [data_root]"
+    echo "Usage: $0 <YYYYMMDD> <case_name> [data_root] [cycle]"
     echo "  YYYYMMDD  : date to download (e.g. 20260227)"
     echo "  case_name : name of the simulation case (e.g. test001)"
     echo "  data_root : optional base path (default: /mnt/data)"
+    echo "  cycle     : GFS cycle hour 00/06/12/18 (default: 00)"
     echo ""
     echo "Example: $0 20260227 test001"
-    echo "Example: $0 20260227 test001 /data/wrf"
+    echo "Example: $0 20260227 test001 /data/wrf 00"
     exit 1
 fi
 
 DATE="$1"
 CASE_NAME="$2"
 PROJECT_ROOT="${3:-/mnt/data}"
+CYCLE="${4:-00}"
 DEST="$PROJECT_ROOT/cases/$CASE_NAME/gfs_data"
 
 mkdir -p "$DEST"
@@ -39,7 +39,7 @@ for fhr in 000 003 006 009 012 015 018 021 024; do
     URL="https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.${DATE}/${CYCLE}/atmos/${FILE}"
     OUTPUT="${DEST}/gfs_${DATE}_${CYCLE}_${fhr}.grib2"
     echo "Downloading $FILE..."
-    curl -L -C - "$URL" -o "$OUTPUT"
+    curl -L -C - --retry 3 --retry-delay 10 "$URL" -o "$OUTPUT"
 done
 
 echo ""
